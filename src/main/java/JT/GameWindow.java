@@ -2,12 +2,11 @@ package JT;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.util.ArrayList;
-import java.util.Random;
 
-
+/**
+ * Responsible for rendering the GUI and connecting user input
+ * with the GameController logic.
+ */
 public class GameWindow {
 
     int tileSize = 70;
@@ -16,7 +15,7 @@ public class GameWindow {
     int boardWith = numCols * tileSize;
     int boardHeight = numRows * tileSize;
 
-    //Creating the Game Window
+    // Creating the Game Window
     JFrame frame = new JFrame("Minesweeper");
     JLabel textLabel = new JLabel();
     JPanel textPanel = new JPanel();
@@ -24,187 +23,71 @@ public class GameWindow {
 
     int mineCount = 10;
     MineTile[][] board = new MineTile[numRows][numCols];
-    ArrayList<MineTile> mineList;
-    Random random = new Random();
 
-    int tilesClicked = 0; //Keeps track on all the tiles clicked
-    boolean gameOver = false;
+    GameController controller;
 
-    //CONSTRUCTOR
-    GameWindow(){
+    // ------------------------------------------------------------
+    // CONSTRUCTOR
+    // ------------------------------------------------------------
+    GameWindow() {
         frame.setSize(boardWith, boardHeight);
-        frame.setLocationRelativeTo(null); // Ensures that the board opens in the center of the screen
+        frame.setLocationRelativeTo(null);
         frame.setResizable(false);
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE); //Ensure that the x button in the top corner exits the program
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setLayout(new BorderLayout());
 
-        //Settings for the text label
+        // Header label setup
         textLabel.setFont(new Font("Arial", Font.BOLD, 25));
         textLabel.setHorizontalAlignment(JLabel.CENTER);
-        textLabel.setText("Minesweeper! Total Mines: " + Integer.toString(mineCount));
+        textLabel.setText("Minesweeper! Total Mines: " + mineCount);
         textLabel.setOpaque(true);
 
-        //Adding the text panel and text label to the frame
+        // Add label to window
         textPanel.setLayout(new BorderLayout());
         textPanel.add(textLabel);
         frame.add(textLabel, BorderLayout.NORTH);
 
-        //Adding the grid to the game window
+        // Setup grid panel
         boardPanel.setLayout(new GridLayout(numRows, numCols));
-        //boardPanel.setBackground(Color.BLUE);
         frame.add(boardPanel);
 
-        //Adding the MineTiles to the grid
-        for (int r = 0; r < numRows; r++){
-            for (int c = 0; c < numCols; c++){
+        // Create controller
+        controller = new GameController(board, mineCount);
+
+        // Create shared click handler
+        TileClickHandler clickHandler = new TileClickHandler(controller, this, numRows, numCols);
+
+        // Initialize the board
+        for (int r = 0; r < numRows; r++) {
+            for (int c = 0; c < numCols; c++) {
                 MineTile tile = new MineTile(r, c);
                 board[r][c] = tile;
 
-                //Styling the minetiles
+                // Style each tile
                 tile.setFocusable(false);
-                tile.setMargin(new Insets(0,0,0,0));
+                tile.setMargin(new Insets(0, 0, 0, 0));
                 tile.setFont(new Font("Arial Unicode MS", Font.PLAIN, 45));
-                //Checking for the click handling
-                tile.addMouseListener(new MouseAdapter() {
-                    @Override
-                    public void mousePressed(MouseEvent e) {
-                        //If game over. Don't handle clicks
-                        if (gameOver) {
-                            return;
-                        }
-                        MineTile tile = (MineTile) e.getSource();
 
-                        //Left Click
-                        if (e.getButton() == MouseEvent.BUTTON1){
-                            if(tile.getText() == ""){
-                                if(mineList.contains(tile)) {
-                                    revealMines();
-                                }
-                                else {
-                                    checkMine(tile.r, tile.c);
-                                }
-                            }
-                        }
-                        //Right Click
-                        else if (e.getButton() == MouseEvent.BUTTON3){
-                            //If tile does not have flag, set flag
-                            if (tile.getText() == "" && tile.isEnabled()){
-                                tile.setText("🚩");
-                            }
-                            //If tile has flag, remove flag
-                            else if (tile.getText() == "🚩") {
-                                tile.setText("");
-                            }
-                        }
-                    }
-                });
+                // Assign click handler
+                tile.addMouseListener(clickHandler);
+
                 boardPanel.add(tile);
             }
         }
-//Makes everything visible after the components are loaded
+
+        // Place mines after all tiles are ready
+        controller.setMines();
+
+        // Show the window
         frame.setVisible(true);
-
-        //Placing the mines
-        setMines();
     }
 
-    //Function for setting the mines
-    void setMines(){
-        mineList = new ArrayList<MineTile>();
-
-        int mineLeft = mineCount;
-        while (mineLeft > 0) {
-            int r = random.nextInt(numRows);
-            int c = random.nextInt(numCols);
-
-            MineTile tile = board[r][c];
-            if (!mineList.contains(tile)) {
-                mineList.add(tile);
-                mineLeft -= 1;
-            }
-        }
+    /**
+     * Updates the status label text at the top of the window.
+     *
+     * @param text The message to display (e.g., "Game Over!", "Congrats!")
+     */
+    public void updateStatusText(String text) {
+        textLabel.setText(text);
     }
-
-    //Function for revealing the mines
-    void revealMines() {
-        for (int i = 0; i < mineList.size(); i++){
-            MineTile tile = mineList.get(i);
-            tile.setText("💣");
-        }
-
-        gameOver = true;
-        textLabel.setText("Game over");
-    }
-
-    //Function for Checking the mines
-    void checkMine(int r, int c) {
-        //If out of bounds
-        if (r < 0 || r >= numRows || c < 0 || c >= numCols){
-            return;
-        }
-
-        MineTile tile = board[r][c];
-        //If tile is already clicked on
-        if (!tile.isEnabled()){
-            return;
-        }
-
-        tile.setEnabled(false);
-        tilesClicked += 1;
-
-        int minesFound = 0;
-
-        //Checking Top 3 Minetiles for mines
-        minesFound += countMine(r-1, c-1); //Top Left
-        minesFound += countMine(r-1, c); //Top middle
-        minesFound += countMine(r-1, c+1); //Top Right
-
-        //Checking Left and Right for mines
-        minesFound += countMine(r, c-1); //Left
-        minesFound += countMine(r, c+1); //Right
-
-        //Checking Bottom Minetiles for mines
-        minesFound += countMine(r+1, c-1); //Bottom left
-        minesFound += countMine(r+1, c); // Bottom Middle
-        minesFound += countMine(r+1, c+1); // Bottom Right
-
-        //Setting the text on how many mines is close to that square
-        if (minesFound > 0){
-            tile.setText(Integer.toString(minesFound));
-        }
-        //No mines close. Empty MineTile
-        else {
-            tile.setText("");
-            //Checking Top 3 neighbour Tiles
-            checkMine(r-1,c-1); //Checking top left neighbour Tile
-            checkMine(r-1,c); // Top Middle
-            checkMine(r-1,c+1); // Top Right
-            //Check left and right neighbour tiles
-            checkMine(r,c-1); // Left
-            checkMine(r,c+1); // Right
-            //Checking Bottom 3 Neighbours
-            checkMine(r+1,c-1); // Bottom Left
-            checkMine(r+1,c); //Bottom Middle
-            checkMine(r+1,c+1); // Bottom Right
-        }
-
-        if (tilesClicked == numRows * numCols - mineList.size()) {
-            gameOver = true;
-            textLabel.setText("Congrats! U won!");
-        }
-    }
-
-    int countMine(int r, int c){
-        //If out of bounds
-        if (r < 0 || r >= numRows || c < 0 || c >= numCols){
-            return 0;
-        }
-        //If contain Mine
-        if (mineList.contains(board[r][c])) {
-            return 1;
-        }
-        //If don't contain mine
-        return 0;
-    }
-
 }
