@@ -5,6 +5,7 @@ import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
+import java.util.Random;
 
 
 public class GameWindow {
@@ -21,8 +22,13 @@ public class GameWindow {
     JPanel textPanel = new JPanel();
     JPanel boardPanel = new JPanel();
 
+    int mineCount = 10;
     MineTile[][] board = new MineTile[numRows][numCols];
     ArrayList<MineTile> mineList;
+    Random random = new Random();
+
+    int tilesClicked = 0; //Keeps track on all the tiles clicked
+    boolean gameOver = false;
 
     //CONSTRUCTOR
     GameWindow(){
@@ -35,7 +41,7 @@ public class GameWindow {
         //Settings for the text label
         textLabel.setFont(new Font("Arial", Font.BOLD, 25));
         textLabel.setHorizontalAlignment(JLabel.CENTER);
-        textLabel.setText("Minesweeper");
+        textLabel.setText("Minesweeper! Total Mines: " + Integer.toString(mineCount));
         textLabel.setOpaque(true);
 
         //Adding the text panel and text label to the frame
@@ -58,11 +64,14 @@ public class GameWindow {
                 tile.setFocusable(false);
                 tile.setMargin(new Insets(0,0,0,0));
                 tile.setFont(new Font("Arial Unicode MS", Font.PLAIN, 45));
-               // tile.setText("💣");
                 //Checking for the click handling
                 tile.addMouseListener(new MouseAdapter() {
                     @Override
                     public void mousePressed(MouseEvent e) {
+                        //If game over. Don't handle clicks
+                        if (gameOver) {
+                            return;
+                        }
                         MineTile tile = (MineTile) e.getSource();
 
                         //Left Click
@@ -74,6 +83,17 @@ public class GameWindow {
                                 else {
                                     checkMine(tile.r, tile.c);
                                 }
+                            }
+                        }
+                        //Right Click
+                        else if (e.getButton() == MouseEvent.BUTTON3){
+                            //If tile does not have flag, set flag
+                            if (tile.getText() == "" && tile.isEnabled()){
+                                tile.setText("🚩");
+                            }
+                            //If tile has flag, remove flag
+                            else if (tile.getText() == "🚩") {
+                                tile.setText("");
                             }
                         }
                     }
@@ -92,9 +112,17 @@ public class GameWindow {
     void setMines(){
         mineList = new ArrayList<MineTile>();
 
-        mineList.add(board[2][2]);
-        mineList.add(board[2][3]);
-        mineList.add(board[2][4]);
+        int mineLeft = mineCount;
+        while (mineLeft > 0) {
+            int r = random.nextInt(numRows);
+            int c = random.nextInt(numCols);
+
+            MineTile tile = board[r][c];
+            if (!mineList.contains(tile)) {
+                mineList.add(tile);
+                mineLeft -= 1;
+            }
+        }
     }
 
     //Function for revealing the mines
@@ -103,12 +131,26 @@ public class GameWindow {
             MineTile tile = mineList.get(i);
             tile.setText("💣");
         }
+
+        gameOver = true;
+        textLabel.setText("Game over");
     }
 
     //Function for Checking the mines
     void checkMine(int r, int c) {
+        //If out of bounds
+        if (r < 0 || r >= numRows || c < 0 || c >= numCols){
+            return;
+        }
+
         MineTile tile = board[r][c];
+        //If tile is already clicked on
+        if (!tile.isEnabled()){
+            return;
+        }
+
         tile.setEnabled(false);
+        tilesClicked += 1;
 
         int minesFound = 0;
 
@@ -133,6 +175,22 @@ public class GameWindow {
         //No mines close. Empty MineTile
         else {
             tile.setText("");
+            //Checking Top 3 neighbour Tiles
+            checkMine(r-1,c-1); //Checking top left neighbour Tile
+            checkMine(r-1,c); // Top Middle
+            checkMine(r-1,c+1); // Top Right
+            //Check left and right neighbour tiles
+            checkMine(r,c-1); // Left
+            checkMine(r,c+1); // Right
+            //Checking Bottom 3 Neighbours
+            checkMine(r+1,c-1); // Bottom Left
+            checkMine(r+1,c); //Bottom Middle
+            checkMine(r+1,c+1); // Bottom Right
+        }
+
+        if (tilesClicked == numRows * numCols - mineList.size()) {
+            gameOver = true;
+            textLabel.setText("Congrats! U won!");
         }
     }
 
