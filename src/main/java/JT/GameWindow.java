@@ -35,6 +35,8 @@ public class GameWindow {
         frame.setResizable(false);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setLayout(new BorderLayout());
+        //Adding the menu
+        frame.setJMenuBar(new Menu(this));
 
         // Header label setup
         textLabel.setFont(new Font("Arial", Font.BOLD, 25));
@@ -112,6 +114,12 @@ public class GameWindow {
                 System.exit(0);  // exit application
             }
         }
+    }
+
+    //Restart game
+    public void restartGame() {
+        frame.dispose();
+        new GameWindow();
     }
 
 }
