@@ -89,5 +89,29 @@ public class GameWindow {
      */
     public void updateStatusText(String text) {
         textLabel.setText(text);
+
+        // Show pop-up when game is finished
+        if (text.equals("Game Over!") || text.equals("Congrats! You won!")) {
+            int option = JOptionPane.showOptionDialog(
+                    frame,
+                    text + "\nWould you like to play again?",
+                    "Game finished",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.INFORMATION_MESSAGE,
+                    null,
+                    new Object[]{"Restart", "Exit"},
+                    "Restart"
+            );
+            //If user chose Yes, start new game
+            if (option == JOptionPane.YES_OPTION) {
+                frame.dispose();  // close current window
+                new GameWindow();  // start new game
+
+                //If no, Exit app
+            } else {
+                System.exit(0);  // exit application
+            }
+        }
     }
+
 }
